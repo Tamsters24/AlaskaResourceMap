@@ -14,11 +14,6 @@
                        @bind:event="oninput">
             </div>
         </td>
-    <!--
-    <td>
-        <input type="button" class="btn btn-primary" style="margin: 10px; background-color: #c82333" value="Additional Filters" @onclick="@FilterDisplay" />
-    </td>
-    -->
     </tr>
 </table>
 <hr />
@@ -114,36 +109,9 @@ else
     </div>  
 }
 
-@if (_displayFilter)  
-{
-    <div class="modal fade show d-block" id="filterModal" style="position: absolute; left: 80%; max-width:300px; height: auto; max-height: 70%; overflow: auto">
-        <div class="modal-content">
-            <div class="modal-header" style="position: sticky; z-index: +1; top: 0; background-color: #005cbf; padding-left: 2px; padding-right: 2px; color: white">
-                <input type="button" class="btn btn-primary" style="margin: 10px; background-color: #c82333" value="Select Filters" @onclick="UpdateTable" />
-                <button type="button" class="close" style="padding-right: 50px; color: white" @onclick="@Close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">×</span>
-                </button>
-            </div>
-            <div class="modal-body" style="padding-left: 20px">
-                @foreach (var pair in _filterToggle)
-                {
-                    <b>@pair.Key Filters:</b><br>
-                    @foreach (var value in _filterToggle[pair.Key])
-                    {
-                        <input type="checkbox" id="@value.attribute" name="@value.attribute" value="@value.attribute"
-                               checked="@value.Item2">
-                        <label for="@value.attribute">@value.attribute</label><br>
-                    }
-                    <br>
-                }
-            </div>
-        </div>
-    </div>  
-}
-
 @code {
     private AkResourceData[] _resourceDetails;
-    bool _showSearchDetails, _displayFilter;
+    bool _showSearchDetails;
     
     protected override async Task OnInitializedAsync() {
         _resourceDetails = await AkResourceDataService.GetResourceLocations();
@@ -152,12 +120,11 @@ else
             resource.DisplayLocation = true;
         }
         _showSearchDetails = false;
-        _displayFilter = false;
     }
 
-    public string SiteNameFilter { get; set; }
+    private string SiteNameFilter { get; set; }
 
-    public bool IsRowDisplayed(AkResourceData akResource)
+    private bool IsRowDisplayed(AkResourceData akResource)
     {
         // If no search filter is applied, display all rows
         if (string.IsNullOrEmpty(SiteNameFilter))
@@ -184,47 +151,9 @@ else
 
         return Task.CompletedTask;
     }
-
-    private Dictionary<string, List<(string attribute, bool)>> _filterToggle = new Dictionary<string, List<(string, bool)>>()
-    {
-        ["Site Type"] = new List<(string, bool)>
-        {
-            ("Mine",  true), ("Prospect", true), ("Occurrence", true), ("Undetermined", true)
-        },
-        ["Production Status"] = new List<(string, bool)>
-        {
-            ("Yes", true), ("Yes; Small", true), ("Yes; Medium", true), ("Yes; Large", true),
-            ("No/None", true), ("Undetermined", true)
-        },
-        ["Site Status"] = new List<(string, bool)>
-        {
-            ("Active", true), ("Active?", true), ("Probably Inactive", true), ("Inactive", true), ("Undetermined", true)
-        }
-    };
     
-    Task FilterDisplay()
-    {
-        _displayFilter = true;
-        
-        return Task.CompletedTask;
-    }
-
-    private void UpdateTable()
-    {
-        bool isSiteTypeAttrbChecked = _filterToggle["Site Type"].Any(item => item.Item2);
-
-        foreach (var resource in _resourceDetails)
-        {
-            if (resource.SiteType != "Mine") continue;
-            resource.DisplayLocation = !isSiteTypeAttrbChecked;
-        }
-        
-        Close();
-    }
-
     void Close()
     {
         _showSearchDetails = false;
-        _displayFilter = false;
     }
 }
