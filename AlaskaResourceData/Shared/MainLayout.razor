@@ -1,0 +1,22 @@
+﻿@inherits Microsoft.AspNetCore.Components.LayoutComponentBase
+
+<div class="sidebar">
+    <NavMenu />
+</div>
+
+<div class="main">
+    <div class="top-row px-4">
+        <a href="https://docs.microsoft.com/en-us/aspnet/" target="_blank">About</a>
+    </div>
+
+    <div class="content px-4">
+        @Body
+    </div>
+    
+    <footer class="border-top footer text-muted" style="position: sticky; top: 100%; font-size: 16px">
+        &ensp; &ensp; Open File, Data, and Source materials:
+        &ensp; &bull; <a href="https://mrdata.usgs.gov/ardf/">USGS Alaska Resource Data file</a>
+        &ensp; &bull; <a href="https://github.com/Mehigh17/BlazorLeaflet">BlazorLeaflet</a>
+        &ensp; &bull; <a href="https://www.openstreetmap.org/#map=4/38.01/-95.84">OpenStreetMap</a>
+    </footer>
+</div>

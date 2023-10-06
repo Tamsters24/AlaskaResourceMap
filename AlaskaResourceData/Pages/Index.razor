@@ -1,0 +1,331 @@
+﻿@page "/"
+@using System.Drawing
+@inject IJSRuntime JsRuntime
+@using BlazorLeaflet
+@using BlazorLeaflet.Models
+@using AlaskaResourceData.Models
+@using AlaskaResourceData.Services
+
+<h5>
+    Alaska Resource Map
+    <button class="oi oi-home" aria-hidden="true" style="margin-left:50px;background-color:#007bff" @onclick="PanToCenter"></button>
+</h5>
+
+<div class="row">
+    <!---------------------------------- Map ----------------------------------->
+    <div class="col" style="height: 505px; width: 575px;">
+        <LeafletMap Map="_map"/>
+    </div>
+    
+    <!------------------------- Color Code Selection --------------------------->
+    <div class="col">
+        <!------------------- Component: Dropdown selection -------------------->
+        <div class="row">
+            <form>
+                <label for="color-code-by">Color Code Locations By:</label>
+                <select id="color-code-by" name="color-code-by" @bind="_colorCodeAttribute">
+                    <option value="">Data Attribute</option>
+                    @foreach (var attrbOption in _colorCodeAttrbOptions)
+                    {
+                        <option value="@attrbOption.Value">@attrbOption.Text</option>
+                    }
+                </select>
+            </form>
+        </div>
+        <hr/>
+        <!--------------------- Component: Color Code Key --------------------->
+        <p>
+            <b>Color Code Key</b>
+        </p>
+        <div class="row">
+            @if (_colorCodeAttribute == "")
+            {
+                <p>&ensp;&ensp;No Attribute selected</p>
+            }
+            else
+            {
+                @foreach (var mapAttrb in _colorCodeAttrbMappings[_colorCodeAttribute])
+                {
+                    <span style="padding-right:20px">
+                        <svg height="30" width="25">
+                            <circle cx="12" cy="12" r="10" stroke="@mapAttrb.AttrbColor"
+                                    stroke-width="3" fill="@mapAttrb.AttrbColor"/>
+                        </svg>
+                        @mapAttrb.Label
+                    </span>
+                }
+            }
+        </div>
+        <hr/>
+        <!--------------------------- Filter Selection ----------------------------->
+        @if (_colorCodeAttribute == "")
+        {
+            <p></p>
+        }
+        else
+        {
+            <p>
+                <b>Attribute Filter Options:</b>
+            </p>
+            <input type="button" class="btn btn-primary" style="margin-top: -4px; margin-bottom: 10px; margin-right: 20px; padding: 6px; background-color: #c82333"
+                value="Apply Filter" @onclick="@RemoveCircleLayer"/>
+            <input type="button" class="btn btn-primary" style="width: 92px; margin-top: -4px; margin-bottom: 10px; padding: 6px; background-color: #c82333"
+                value="Select All" @onclick="@ResetFilters"/>    
+            
+            @foreach (var tuple in _colorCodeAttrbMappings[_colorCodeAttribute])
+            {
+                @foreach (var filter in _filterOptions)
+                {
+                    if (tuple.Label == filter.FilterLabel)
+                    {
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" @bind="filter.IsChecked"/>
+                            <label class="form-check-label">@filter.FilterLabel</label>
+                        </div>
+                    }
+                }
+            }
+        }
+    </div>
+</div>
+
+@code
+{
+    /*---------------------------------- Map ----------------------------------*/
+    private Map _map;
+    private readonly LatLng _startAt = new LatLng(63f, -155f);  // Map Center
+    private AkResourceData[] _resourceLocations;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        _resourceLocations = await AkResourceDataService.GetResourceLocations();
+
+        _map = new Map(JsRuntime)
+        {
+            Center = _startAt,
+            Zoom = 3.5f
+        };
+
+        _map.OnInitialized += () =>
+        {
+            _map.AddLayer(new TileLayer
+            {
+                UrlTemplate = "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                Attribution = "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors",
+            });
+            
+            foreach (var resource in _resourceLocations)
+            {
+                resource.DisplayLocation = true;
+                var circle = new Circle
+                {
+                    Identifier = @resource.ArdfNum,
+                    Position = new LatLng(@resource.Latitude, @resource.Longitude),
+                    Radius = 1000f,
+                    Fill = true,
+                    FillColor = Color.DarkBlue,
+                    StrokeColor = Color.DarkBlue,
+                    FillOpacity = 1f,
+                    Tooltip = new Tooltip { Content = @resource.ArdfNum },
+                    Popup = new Popup {
+                        Content = ($"Site Name: {@resource.Site}<br>" +
+                                   $"ARDF no: {@resource.ArdfNum}<br>" +
+                                   $"MRDS no: {@resource.MrdsNum}<br>" +
+                                   $"Main Commodities: {@resource.CommMain}<br>" +
+                                   $"Other Commodities: {@resource.CommOther}<br>" +
+                                   $"Ore Minerals: {@resource.Ore}<br>" +
+                                   $"Gangue Minerals: {@resource.Gangue}")
+                    }
+                };
+                _map.AddLayer(circle);
+            }
+        };
+        
+        foreach (var filter in _filterOptions)
+        {
+            filter.IsChecked = false;
+        }
+    }
+    
+    private void PanToCenter()
+    {
+        _map.FitBounds(new PointF(62f, 154f), new PointF(64f, 156f), maxZoom: 3.5f);
+        _map.PanTo(new PointF(63f, -155f), animate: true, duration: 1f);
+    }
+    
+    /*------------------------- Color Code Selection --------------------------*/
+    
+    private string _colorCodeAttribute = "";  // Bind Source: Dropdown selection. Controls Color Code Key
+    
+    // Options for color code Dropdown selection
+    private readonly List<(string Value, string Text)> _colorCodeAttrbOptions = new List<(string Value, string Text)>
+    {
+        ("site_type", "Site Type"),
+        ("production", "Production Status"),
+        ("status", "Site Status")
+    };
+    
+    // Colors for the various Attributes after Dropdown selection is displayed
+    private readonly Dictionary<string, List<(string Label, string AttrbColor)>> _colorCodeAttrbMappings =
+        new Dictionary<string, List<(string Label, string AttrbColor)>>
+    {
+        ["site_type"] = new List<(string, string)>
+        {
+            ("Mine", "darkblue"),
+            ("Prospect", "green"),
+            ("Occurrence", "gray"),
+            ("Undetermined", "orange")
+        },
+        ["production"] = new List<(string, string)>
+        {
+            ("Yes", "lightgreen"),
+            ("Yes; small", "green"),
+            ("Yes; medium", "orange"),
+            ("Yes; large", "maroon"),
+            ("No", "gray"),
+            ("Undetermined", "black")
+        },
+        ["status"] = new List<(string, string)>
+        {
+            ("Active", "green"),
+            ("Active?", "lightgreen"),
+            ("Probably inactive", "maroon"),
+            ("Inactive", "darkblue"),
+            ("Undetermined", "gray")
+        }
+    };
+    
+    private Color GetAttribColor(AkResourceData resource)
+    {
+        switch (_colorCodeAttribute)
+        {
+            case "site_type" when @resource.SiteType == "Mine" || @resource.SiteType == "Mines"
+                                  || @resource.SiteType == "Mine?" || @resource.SiteType == "Mines(?)":
+                return Color.DarkBlue;
+            case "site_type" when @resource.SiteType == "Prospect" || @resource.SiteType == "Prospects"
+                                  || @resource.SiteType == "Prospect?" || @resource.SiteType == "Prospect(?)":
+                return Color.Green;
+            case "site_type" when @resource.SiteType == "Occurrence" || @resource.SiteType == "Occurrences"
+                                  || @resource.SiteType == "Occurrence?":
+                return Color.Gray;
+            case "site_type":
+                return Color.Orange;
+            case "production" when @resource.Production.Contains("Yes"):
+            {
+                if (@resource.Production.Contains("small"))
+                {
+                    return Color.Green;
+                }
+                else if (@resource.Production.Contains("medium"))
+                {
+                    return Color.Orange;
+                }
+                else if (@resource.Production.Contains("large"))
+                {
+                    return Color.Maroon;
+                }
+                else
+                {
+                    return Color.LightGreen;
+                }
+            }
+            case "production" when @resource.Production.Contains("No"):
+                return Color.Gray;
+            case "production" when @resource.Production.Contains("Un"):
+            case "production":
+                return Color.Black;
+            case "status" when @resource.Status == "Active":
+                return Color.Green;
+            case "status" when @resource.Status == "Active?":
+                return Color.LightGreen;
+            case "status" when @resource.Status == "Probably inactive":
+                return Color.Maroon;
+            case "status" when @resource.Status == "Inactive":
+                return Color.DarkBlue;
+            case "status":
+                return Color.Gray;
+            
+            default:
+                return Color.DarkBlue;
+        }
+    }
+
+    public class FilterOption
+    {
+        public string FilterLabel { get; set; }
+        public bool IsChecked { get; set; }
+    }
+    
+    private readonly List<FilterOption> _filterOptions = new List<FilterOption>
+    {
+        new FilterOption { FilterLabel = "Mine", IsChecked = true },
+        new FilterOption { FilterLabel = "Prospect", IsChecked = true },
+        new FilterOption { FilterLabel = "Occurrence", IsChecked = true },
+        new FilterOption { FilterLabel = "Yes", IsChecked = true },
+        new FilterOption { FilterLabel = "Yes; small", IsChecked = true },
+        new FilterOption { FilterLabel = "Yes; medium", IsChecked = true },
+        new FilterOption { FilterLabel = "Yes; large", IsChecked = true },
+        new FilterOption { FilterLabel = "No", IsChecked = true },
+        new FilterOption { FilterLabel = "Active", IsChecked = true },
+        new FilterOption { FilterLabel = "Active?", IsChecked = true },
+        new FilterOption { FilterLabel = "Probably inactive", IsChecked = true },
+        new FilterOption { FilterLabel = "Inactive", IsChecked = true },
+        new FilterOption { FilterLabel = "Undetermined", IsChecked = true },
+        new FilterOption { FilterLabel = "Not Designated", IsChecked = true },
+    };
+
+    private void RemoveCircleLayer()
+    {
+        foreach (var layer in _map.GetLayers())
+        {
+            if (layer.GetType() != typeof(TileLayer))
+                _map.RemoveLayer(layer);
+        }
+        
+        foreach (var location in _resourceLocations)
+        {
+            foreach (var option in _filterOptions)
+            {
+                if (!option.IsChecked) continue;
+                if (_colorCodeAttribute == "site_type" &&
+                    !location.SiteType.Contains(option.FilterLabel)) continue;
+                if (_colorCodeAttribute == "production" &&
+                    location.Production != option.FilterLabel) continue;
+                if (_colorCodeAttribute == "status" &&
+                    location.Status != option.FilterLabel) continue;
+
+                var useColor = GetAttribColor(location);
+                var circle = new Circle
+                {
+                    Identifier = @location.ArdfNum,
+                    Position = new LatLng(@location.Latitude, @location.Longitude),
+                    Radius = 1000f,
+                    Fill = true,
+                    FillColor = useColor,
+                    StrokeColor = useColor,
+                    FillOpacity = 1f,
+                    Tooltip = new Tooltip { Content = @location.ArdfNum },
+                    Popup = new Popup {
+                        Content = ($"Site Name: {@location.Site}<br>" +
+                                   $"ARDF no: {@location.ArdfNum}<br>" +
+                                   $"MRDS no: {@location.MrdsNum}<br>" +
+                                   $"Main Commodities: {@location.CommMain}<br>" +
+                                   $"Other Commodities: {@location.CommOther}<br>" +
+                                   $"Ore Minerals: {@location.Ore}<br>" +
+                                   $"Gangue Minerals: {@location.Gangue}")
+                    }
+                };
+                _map.AddLayer(circle);
+            }
+        }
+    }
+    
+    private void ResetFilters()
+    {
+        foreach (var option in _filterOptions)
+        {
+            option.IsChecked = true;
+        }
+        RemoveCircleLayer();
+    }
+}

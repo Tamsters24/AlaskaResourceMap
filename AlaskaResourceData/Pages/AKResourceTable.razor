@@ -1,0 +1,230 @@
+﻿@page "/akResourceTable"
+@using AlaskaResourceData.Models
+@using AlaskaResourceData.Services
+@inject AkResourceDataService AkResourceMapService
+
+<h3>Resource Details</h3>
+<!-------------------------------- Filter Options --------------------------------->
+<table style="width: 80%">
+    <tr style="background-color:#336699 ; color:#FFFFFF ;border: solid 1px #659EC7;">
+        <td style="text-align: center">
+            <div class="form-group" style="margin: 10px">
+                <input class="form-control" type="text" placeholder="Display by Commodity/Mineral" style="margin-top: 3px; margin-right: 50px"
+                       @bind="SiteNameFilter"
+                       @bind:event="oninput">
+            </div>
+        </td>
+    <!--
+    <td>
+        <input type="button" class="btn btn-primary" style="margin: 10px; background-color: #c82333" value="Additional Filters" @onclick="@FilterDisplay" />
+    </td>
+    -->
+    </tr>
+</table>
+<hr />
+
+<!--------------------------------- Table Rows ----------------------------------->
+@if (_resourceDetails == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+        <tr>
+            <th scope="col" style="width: 20%">ARDF Num</th>
+            <th scope="col" style="width: 40%">Site Name</th>
+            <th scope="col" style="width: 20%">Latitude</th>
+            <th scope="col" style="width: 20%">Longitude</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var resource in _resourceDetails)
+        {
+            if (!IsRowDisplayed(resource))
+                continue;
+            <tr>
+                <td>
+                    <button @onclick="() => SearchDetails(resource.ArdfNum)" class="btn" style="color: #005cbf;">
+                        <b>@resource.ArdfNum</b>
+                    </button>
+                </td>
+                <td>@resource.Site</td>
+                <td>@resource.Latitude</td>
+                <td>@resource.Longitude</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+
+}
+
+<!---------------------------- Result Details Modal ------------------------------>
+@if (_showSearchDetails)
+{
+    <div class="modal fade show d-block" id="resultsModal" style="width:80%; height: auto; max-height: 70%; margin: 5% 10% 10%; overflow: auto">
+        <div class="modal-content">
+            <div class="modal-header" style="position: sticky; z-index: +1; top: 0; background-color: #005cbf; padding-left: 2px; padding-right: 2px; color: white">
+                <h5 class="modal-title" style="padding-left: 25px"><b>&ensp;&ensp;Resource Details</b></h5>
+                <button type="button" class="close" style="padding-right: 50px; color: white" @onclick="@Close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                @if (_resourceResult == null)
+                {
+                    <p style="text-align: center">Search parameter not found</p>
+                }
+                else
+                {
+                    <p style="padding-left: 20px; line-height: 2">
+                        <b>ARDF Num:</b> @_resourceResult.ArdfNum<br>
+                        <b>Site Name:</b> @_resourceResult.Site<br>
+                        <b>Site Type:</b> @_resourceResult.SiteType<br>
+                        <b>Site Status:</b> @_resourceResult.Status<br>
+                        <b>Production Status:</b> @_resourceResult.Production<br>
+                        <b>Quad-250 Designation:</b> @_resourceResult.Quad250<br>
+                        <b>Quad-63360 Designation:</b> @_resourceResult.Quad63360<br>
+                        <b>Location Coordinate:</b> @_resourceResult.Latitude, @_resourceResult.Longitude<br>
+                        <b>Location Details:</b> @_resourceResult.Location<br>
+                        <b>MRDS NUM:</b> @_resourceResult.MrdsNum<br>
+                        <b>Main Commodities:</b> @_resourceResult.CommMain<br>
+                        <b>Other Commodities:</b> @_resourceResult.CommOther<br>
+                        <b>Ore Minerals:</b> @_resourceResult.Ore<br>
+                        <b>Gangue Minerals:</b> @_resourceResult.Gangue<br>
+                        <b>Deposit Model:</b> @_resourceResult.DepModel<br>
+                        <b>Geologic Description:</b> @_resourceResult.GeolDesc<br>
+                        <b>Workings and Exploration:</b> @_resourceResult.WorkExpl<br>
+                        <b>Alteration:</b> @_resourceResult.Alteration<br>
+                        <b>Age of Mineralization:</b> @_resourceResult.Age<br>
+                        <b>Production Notes:</b> @_resourceResult.ProdNotes<br>
+                        <b>Reserves:</b> @_resourceResult.Reserves<br>
+                        <b>Additional Comments:</b> @_resourceResult.Comments<br>
+                        <b>Expanded References:</b> @_resourceResult.ExpandRef<br>
+                        <b>Primary Reference:</b> @_resourceResult.PrimeRef<br>
+                        <b>Reporters:</b> @_resourceResult.ReptNames<br>
+                        <b>Reporter Affiliation:</b> @_resourceResult.ReptAff<br>
+                        <b>Last Report Date:</b> @_resourceResult.ReptDate<br>
+                        <b>Model Code:</b> @_resourceResult.ModelCode
+                    </p>
+                }
+            </div>
+        </div>
+    </div>  
+}
+
+@if (_displayFilter)  
+{
+    <div class="modal fade show d-block" id="filterModal" style="position: absolute; left: 80%; max-width:300px; height: auto; max-height: 70%; overflow: auto">
+        <div class="modal-content">
+            <div class="modal-header" style="position: sticky; z-index: +1; top: 0; background-color: #005cbf; padding-left: 2px; padding-right: 2px; color: white">
+                <input type="button" class="btn btn-primary" style="margin: 10px; background-color: #c82333" value="Select Filters" @onclick="UpdateTable" />
+                <button type="button" class="close" style="padding-right: 50px; color: white" @onclick="@Close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+            <div class="modal-body" style="padding-left: 20px">
+                @foreach (var pair in _filterToggle)
+                {
+                    <b>@pair.Key Filters:</b><br>
+                    @foreach (var value in _filterToggle[pair.Key])
+                    {
+                        <input type="checkbox" id="@value.attribute" name="@value.attribute" value="@value.attribute"
+                               checked="@value.Item2">
+                        <label for="@value.attribute">@value.attribute</label><br>
+                    }
+                    <br>
+                }
+            </div>
+        </div>
+    </div>  
+}
+
+@code {
+    private AkResourceData[] _resourceDetails;
+    bool _showSearchDetails, _displayFilter;
+    
+    protected override async Task OnInitializedAsync() {
+        _resourceDetails = await AkResourceDataService.GetResourceLocations();
+        foreach (var resource in _resourceDetails)
+        {
+            resource.DisplayLocation = true;
+        }
+        _showSearchDetails = false;
+        _displayFilter = false;
+    }
+
+    public string SiteNameFilter { get; set; }
+
+    public bool IsRowDisplayed(AkResourceData akResource)
+    {
+        // If no search filter is applied, display all rows
+        if (string.IsNullOrEmpty(SiteNameFilter))
+            return true;
+
+        if (akResource.CommMain.Contains(SiteNameFilter, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (akResource.CommOther.Contains(SiteNameFilter, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (akResource.Ore.Contains(SiteNameFilter, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (akResource.Gangue.Contains(SiteNameFilter, StringComparison.OrdinalIgnoreCase))
+            return true;
+        
+        return false;
+    }
+    
+    private AkResourceData _resourceResult;
+    
+    Task SearchDetails(string adrfnum)
+    {
+        _resourceResult = _resourceDetails.FirstOrDefault(r => r.ArdfNum == adrfnum);
+        _showSearchDetails = true;
+
+        return Task.CompletedTask;
+    }
+
+    private Dictionary<string, List<(string attribute, bool)>> _filterToggle = new Dictionary<string, List<(string, bool)>>()
+    {
+        ["Site Type"] = new List<(string, bool)>
+        {
+            ("Mine",  true), ("Prospect", true), ("Occurrence", true), ("Undetermined", true)
+        },
+        ["Production Status"] = new List<(string, bool)>
+        {
+            ("Yes", true), ("Yes; Small", true), ("Yes; Medium", true), ("Yes; Large", true),
+            ("No/None", true), ("Undetermined", true)
+        },
+        ["Site Status"] = new List<(string, bool)>
+        {
+            ("Active", true), ("Active?", true), ("Probably Inactive", true), ("Inactive", true), ("Undetermined", true)
+        }
+    };
+    
+    Task FilterDisplay()
+    {
+        _displayFilter = true;
+        
+        return Task.CompletedTask;
+    }
+
+    private void UpdateTable()
+    {
+        bool isSiteTypeAttrbChecked = _filterToggle["Site Type"].Any(item => item.Item2);
+
+        foreach (var resource in _resourceDetails)
+        {
+            if (resource.SiteType != "Mine") continue;
+            resource.DisplayLocation = !isSiteTypeAttrbChecked;
+        }
+        
+        Close();
+    }
+
+    void Close()
+    {
+        _showSearchDetails = false;
+        _displayFilter = false;
+    }
+}
