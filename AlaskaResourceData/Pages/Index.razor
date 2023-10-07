@@ -8,7 +8,7 @@
 
 <h5>
     Alaska Resource Map
-    <button class="oi oi-home" aria-hidden="true" style="margin-left:50px;background-color:#007bff" @onclick="PanToCenter"></button>
+    <button class="oi oi-home" aria-hidden="true" style="margin-left:50px; padding: 5px; color: white; background-color:#6f6f6f" @onclick="PanToCenter"></button>
 </h5>
 
 <div class="row">
@@ -67,9 +67,9 @@
             <p>
                 <b>Attribute Filter Options:</b>
             </p>
-            <input type="button" class="btn btn-primary" style="margin-top: -4px; margin-bottom: 10px; margin-right: 20px; padding: 6px; background-color: #c82333"
+            <input type="button" class="btn btn-primary" style="margin-top: -4px; margin-bottom: 10px; margin-right: 20px; padding: 6px"
                 value="Apply Filter" @onclick="@RemoveCircleLayer"/>
-            <input type="button" class="btn btn-primary" style="width: 92px; margin-top: -4px; margin-bottom: 10px; padding: 6px; background-color: #c82333"
+            <input type="button" class="btn btn-primary" style="width: 92px; margin-top: -4px; margin-bottom: 10px; padding: 6px"
                 value="Select All" @onclick="@ResetFilters"/>    
             
             @foreach (var tuple in _colorCodeAttrbMappings[_colorCodeAttribute])
