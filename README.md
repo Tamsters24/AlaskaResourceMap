@@ -9,3 +9,10 @@ Open AlaskaResourceData.csproj in your IDE for execution.
 
 - Be sure to change the password for the designated MySQL server in `appsettings.json`.
 - After importing the ardf.csv into the MySQL table, change the first letter of the column names so that it is capitalized.
+- MySQL Stored procedure: `akResDataGet`:
+```
+CREATE DEFINER=`root`@`localhost` PROCEDURE `akResDataGet`()
+BEGIN
+	SELECT * FROM alaskadnr_dmlw_data.alaska_resource_data;
+END
+```
