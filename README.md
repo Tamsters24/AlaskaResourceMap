@@ -5,5 +5,7 @@ This Blazor app utilizes the following resources:
 3) Blazor Leaflet https://github.com/Mehigh17/BlazorLeaflet
 4) Open Street Map
 
+Open AlaskaResourceData.csproj in your IDE for execution.
+
 - Be sure to change the password for the designated MySQL server in `appsettings.json`.
 - After importing the ardf.csv into the MySQL table, change the first letter of the column names so that it is capitalized.
