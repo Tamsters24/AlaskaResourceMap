@@ -115,10 +115,6 @@ else
     
     protected override async Task OnInitializedAsync() {
         _resourceDetails = await AkResourceDataService.GetResourceLocations();
-        foreach (var resource in _resourceDetails)
-        {
-            resource.DisplayLocation = true;
-        }
         _showSearchDetails = false;
     }
 

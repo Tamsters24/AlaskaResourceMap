@@ -116,7 +116,23 @@
             
             foreach (var resource in _resourceLocations)
             {
-                resource.DisplayLocation = true;
+                if (resource.SiteType == "")
+                {
+                    resource.SiteType = "Undetermined";
+                }
+                if (resource.Production is "" or "Undetermined." or "Undet." or "Unknown")
+                {
+                    resource.Production = "Undetermined";
+                }
+                if (resource.Production is "Yes, small" or "Small")
+                {
+                    resource.Production = "Yes; small";
+                }
+                if (resource.Production is "None")
+                {
+                    resource.Production = "No";
+                }
+
                 var circle = new Circle
                 {
                     Identifier = @resource.ArdfNum,

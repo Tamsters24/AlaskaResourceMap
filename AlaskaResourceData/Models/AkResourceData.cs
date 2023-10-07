@@ -31,5 +31,4 @@ public class AkResourceData
     public string ProdNotes { get; set; }
     public string Reserves { get; set; }
     public string PrimeRef { get; set; }
-    public bool DisplayLocation { get; set; }
 }
